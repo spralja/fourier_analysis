@@ -4,24 +4,24 @@ import numpy as np
 class FourierAnalysis:
     mu = 0.75 / np.pi ** 3  # equation (1.1.1)
 
-    def __init__(self, a, b, N):
+    def __init__(self, a, b, n_beta):
         self._a = a  # equation(2.3.1)
         self._b = b  # equation(2.3.2)
-        self._N = N  # equation(2.3.3)
-        self._d_beta = (self.get_b() - self.get_a()) / self.get_N()  # equation (2.3.4)
+        self._n_beta = n_beta  # equation(2.3.3)
+        self._d_beta = (self.get_b() - self.get_a()) / self.get_n_beta()  # equation (2.3.4)
 
         self._calculate_values_of_trigonometric_functions()
 
     def numerically_integrate(self, k, m, n):
-        N = self.get_N()  # equation (2.3.3)
+        n_beta = self.get_n_beta()  # equation (2.3.3)
         mu = self.mu  # equation (1.1.1)
         d_beta2 = self.get_d_beta() ** 2  # equation (2.3.4)
         kappa = self.kappa(k)  # equation (1.1.4)
         sum_f = 0.0  # equation (2.5.1)
         sum_g = 0.0  # equation (2.5.1)
-        for phi in np.arange(N):
-            for theta in np.arange(N):
-                alpha = self.alpha(k=k, m=m, n=n, phi=phi, theta=theta)  # quation (1.4.1)
+        for phi in np.arange(n_beta):
+            for theta in np.arange(n_beta):
+                alpha = self.alpha(m=m, n=n, phi=phi, theta=theta)  # equation (1.4.1)
                 t1 = np.sin(alpha)  # equation (1.10.1)
                 t2 = np.cos(alpha)  # equation (1.10.2)
                 p = self.p(k=k, m=m, n=n, phi=phi, theta=theta)  # equation (1.1.2)
@@ -29,7 +29,7 @@ class FourierAnalysis:
                 sum_f += self.f(kappa=kappa, t1=t1, t2=t2, p=p, q=q)  # equation (2.5.1)
                 sum_g += self.g(kappa=kappa, t1=t1, t2=t2, p=p, q=q)  # equation (2.5.2.)
 
-        return (mu * sum_f * d_beta2, mu * sum_g * d_beta2)
+        return mu * sum_f * d_beta2, mu * sum_g * d_beta2
 
     @staticmethod
     def f(kappa, t1, t2, p, q):  # equation (1.12.1)
@@ -49,7 +49,7 @@ class FourierAnalysis:
 
         return -1
 
-    def alpha(self, k, m, n, phi, theta):  # equation (1.6.1)
+    def alpha(self, m, n, phi, theta):  # equation (1.6.1)
         return np.pi * (m * self.tan(phi) / self.cos(theta) + n * self.tan(theta))
 
     def p(self, k, n, m, phi, theta):  # equation (1.1.2)
@@ -77,24 +77,24 @@ class FourierAnalysis:
     def get_b(self):  # from equation (1)
         return self._b
 
-    def get_N(self):  # from equation (1)
-        return self._N
+    def get_n_beta(self):  # from equation (1)
+        return self._n_beta
 
     def get_d_beta(self):  # from equation (1)
         return self._d_beta
 
     def _calculate_values_of_trigonometric_functions(self):
         # this method precalculates all the required values of the trigonometric functions
-        N = self.get_N()  # from equation (1)
+        n_beta = self.get_n_beta()  # from equation (1)
 
-        self._sin_beta = np.full(N, 0.0)
-        for i in np.arange(N):
+        self._sin_beta = np.full(n_beta, 0.0)
+        for i in np.arange(n_beta):
             self._sin_beta[i] = np.sin(self.beta(i))
 
-        self._cos_beta = np.full(N, 0.0)
-        for i in np.arange(N):
+        self._cos_beta = np.full(n_beta, 0.0)
+        for i in np.arange(n_beta):
             self._cos_beta[i] = np.cos(self.beta(i))
 
-        self._tan_beta = np.full(N, 0.0)
-        for i in np.arange(N):
+        self._tan_beta = np.full(n_beta, 0.0)
+        for i in np.arange(n_beta):
             self._tan_beta[i] = np.tan(self.beta(i))
