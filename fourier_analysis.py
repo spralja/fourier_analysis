@@ -3,6 +3,7 @@ import numpy as np
 
 class FourierAnalysis:
     mu = 0.75 / np.pi ** 3  # equation (1.1.1)
+    C000 = 0.75 / np.pi * np.log(3 + 2 * np.sqrt(2))
 
     def __init__(self, a, b, n_beta, n_sigma):
         self._a = a  # equation(2.3.1)
@@ -24,6 +25,7 @@ class FourierAnalysis:
         self._z_n_sigma_plus = np.array(self._z_n_sigma_plus)
 
         self._calculate_values_of_trigonometric_functions()
+        self._calculate_values_of_c()
 
     def numerically_integrate(self, k, n, m):
         n_beta = self.get_n_beta()  # equation (2.3.3)
@@ -105,6 +107,14 @@ class FourierAnalysis:
     def get_z_n_sigma_plus(self):  # equation (3.3.2)
         return self._z_n_sigma_plus
 
+    def get_F(self, k, n, m):  # equation (3.1.3)
+        n_sigma = self.get_n_sigma()  # equation (3.3.3)
+        return self._F[k + n_sigma][n + n_sigma][m + n_sigma]
+
+    def get_G(self, k, n, m):  # equation (3.1.3)
+        n_sigma = self.get_n_sigma()  # equation (3.3.3)
+        return self._G[k + n_sigma][n + n_sigma][m + n_sigma]
+
     def _calculate_values_of_trigonometric_functions(self):
         # this method precalculates all the required values of the trigonometric functions
         n_beta = self.get_n_beta()  # from equation (1)
@@ -120,3 +130,31 @@ class FourierAnalysis:
         self._tan_beta = np.full(n_beta, 0.0)
         for i in np.arange(n_beta):
             self._tan_beta[i] = np.tan(self.beta(i))
+
+    def _calculate_values_of_c(self):  # equation (1)
+        # this method precalculates all the required values of the C coefficient
+        n_sigma = self.get_n_sigma()  # equation (3.3.4)
+        z_n_sigma = self.get_z_n_sigma()  # equation (3.3.2)
+        z_n_sigma_plus = self.get_z_n_sigma_plus()  # equation (3.3.1)
+        self._F = np.full((2 * n_sigma + 1, 2 * n_sigma + 1, 2 * n_sigma + 1), 0.0)  # equation (3.1.3)
+        self._G = np.full((2 * n_sigma + 1, 2 * n_sigma + 1, 2 * n_sigma + 1), 0.0)  # equation (3.1.3)
+        for k in z_n_sigma:
+            for n in z_n_sigma:
+                for m in z_n_sigma_plus:
+                    self._set_C(k, n, m, self.numerically_integrate(k, n, m))
+
+        for k in z_n_sigma:
+            for n in z_n_sigma_plus:
+                self._set_C(k, n, 0, self.numerically_integrate(k, n, 0))
+
+        for k in z_n_sigma_plus:
+            self._set_C(k, 0, 0, self.numerically_integrate(k, 0, 0))
+
+        self._set_C(0, 0, 0, (self.C000, 0.0))
+
+    def _set_C(self, k, n, m, values):  # equation (1)
+        n_sigma = self.get_n_sigma()
+        self._F[k + n_sigma][n + n_sigma][m + n_sigma] = values[0]
+        self._G[k + n_sigma][n + n_sigma][m + n_sigma] = values[1]
+        self._F[-k + n_sigma][-n + n_sigma][-m + n_sigma] = values[0]
+        self._G[-k + n_sigma][-n + n_sigma][-m + n_sigma] = -values[1]
