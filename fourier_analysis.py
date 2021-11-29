@@ -11,6 +11,17 @@ class FourierAnalysis:
         self._d_beta = (self.get_b() - self.get_a()) / self.get_n_beta()  # equation (2.3.4)
 
         self._n_sigma = n_sigma
+        self._z_n_sigma = []
+        for sigma in np.arange(-n_sigma, n_sigma + 1):
+            self._z_n_sigma.append(sigma)
+
+        self._z_n_sigma = np.array(self._z_n_sigma)
+
+        self._z_n_sigma_plus = []
+        for sigma in np.arange(1, n_sigma):
+            self._z_n_sigma_plus.append(sigma)
+
+        self._z_n_sigma_plus = np.array(self._z_n_sigma_plus)
 
         self._calculate_values_of_trigonometric_functions()
 
@@ -87,6 +98,12 @@ class FourierAnalysis:
 
     def get_n_sigma(self):
         return self._n_sigma
+
+    def get_z_n_sigma(self):
+        return self._z_n_sigma
+
+    def get_z_n_sigma_plus(self):
+        return self._z_n_sigma_plus
 
     def _calculate_values_of_trigonometric_functions(self):
         # this method precalculates all the required values of the trigonometric functions
