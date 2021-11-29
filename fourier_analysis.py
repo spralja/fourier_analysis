@@ -4,11 +4,13 @@ import numpy as np
 class FourierAnalysis:
     mu = 0.75 / np.pi ** 3  # equation (1.1.1)
 
-    def __init__(self, a, b, n_beta):
+    def __init__(self, a, b, n_beta, n_sigma):
         self._a = a  # equation(2.3.1)
         self._b = b  # equation(2.3.2)
         self._n_beta = n_beta  # equation(2.3.3)
         self._d_beta = (self.get_b() - self.get_a()) / self.get_n_beta()  # equation (2.3.4)
+
+        self._n_sigma = n_sigma
 
         self._calculate_values_of_trigonometric_functions()
 
@@ -82,6 +84,9 @@ class FourierAnalysis:
 
     def get_d_beta(self):  # from equation (1)
         return self._d_beta
+
+    def get_n_sigma(self):
+        return self._n_sigma
 
     def _calculate_values_of_trigonometric_functions(self):
         # this method precalculates all the required values of the trigonometric functions
