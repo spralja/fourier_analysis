@@ -10,14 +10,14 @@ class FourierAnalysis:
         self._n_beta = n_beta  # equation(2.3.3)
         self._d_beta = (self.get_b() - self.get_a()) / self.get_n_beta()  # equation (2.3.4)
 
-        self._n_sigma = n_sigma
-        self._z_n_sigma = []
+        self._n_sigma = n_sigma  # equation (3.3.3)
+        self._z_n_sigma = []  # equation (3.3.1)
         for sigma in np.arange(-n_sigma, n_sigma + 1):
             self._z_n_sigma.append(sigma)
 
         self._z_n_sigma = np.array(self._z_n_sigma)
 
-        self._z_n_sigma_plus = []
+        self._z_n_sigma_plus = []  # equation (3.3.2)
         for sigma in np.arange(1, n_sigma):
             self._z_n_sigma_plus.append(sigma)
 
@@ -84,25 +84,25 @@ class FourierAnalysis:
     def tan(self, index):
         return self._tan_beta[index]
 
-    def get_a(self):  # from equation (1)
+    def get_a(self):  # equation (1)
         return self._a
 
-    def get_b(self):  # from equation (1)
+    def get_b(self):  # equation (1)
         return self._b
 
-    def get_n_beta(self):  # from equation (1)
+    def get_n_beta(self):  # equation (1)
         return self._n_beta
 
-    def get_d_beta(self):  # from equation (1)
+    def get_d_beta(self):  # equation (1)
         return self._d_beta
 
-    def get_n_sigma(self):
+    def get_n_sigma(self):  # equation (3.3.3)
         return self._n_sigma
 
-    def get_z_n_sigma(self):
+    def get_z_n_sigma(self):  # equation (3.3.1)
         return self._z_n_sigma
 
-    def get_z_n_sigma_plus(self):
+    def get_z_n_sigma_plus(self):  # equation (3.3.2)
         return self._z_n_sigma_plus
 
     def _calculate_values_of_trigonometric_functions(self):
