@@ -12,7 +12,7 @@ class FourierAnalysis:
 
         self._calculate_values_of_trigonometric_functions()
 
-    def numerically_integrate(self, k, m, n):
+    def numerically_integrate(self, k, n, m):
         n_beta = self.get_n_beta()  # equation (2.3.3)
         mu = self.mu  # equation (1.1.1)
         d_beta2 = self.get_d_beta() ** 2  # equation (2.3.4)
@@ -21,11 +21,11 @@ class FourierAnalysis:
         sum_g = 0.0  # equation (2.5.1)
         for phi in np.arange(n_beta):
             for theta in np.arange(n_beta):
-                alpha = self.alpha(m=m, n=n, phi=phi, theta=theta)  # equation (1.4.1)
+                alpha = self.alpha(n=n, m=m, phi=phi, theta=theta)  # equation (1.4.1)
                 t1 = np.sin(alpha)  # equation (1.10.1)
                 t2 = np.cos(alpha)  # equation (1.10.2)
-                p = self.p(k=k, m=m, n=n, phi=phi, theta=theta)  # equation (1.1.2)
-                q = self.q(k=k, m=m, n=n, phi=phi, theta=theta)  # equation (1.1.3)
+                p = self.p(k=k, n=n, m=m, phi=phi, theta=theta)  # equation (1.1.2)
+                q = self.q(k=k, n=n, m=m, phi=phi, theta=theta)  # equation (1.1.3)
                 sum_f += self.f(kappa=kappa, t1=t1, t2=t2, p=p, q=q)  # equation (2.5.1)
                 sum_g += self.g(kappa=kappa, t1=t1, t2=t2, p=p, q=q)  # equation (2.5.2.)
 
@@ -49,7 +49,7 @@ class FourierAnalysis:
 
         return -1
 
-    def alpha(self, m, n, phi, theta):  # equation (1.6.1)
+    def alpha(self, n, m, phi, theta):  # equation (1.6.1)
         return np.pi * (m * self.tan(phi) / self.cos(theta) + n * self.tan(theta))
 
     def p(self, k, n, m, phi, theta):  # equation (1.1.2)
