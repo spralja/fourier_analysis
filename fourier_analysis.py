@@ -1,10 +1,8 @@
 import numpy as np
-import struct
 
 
 class FourierAnalysis:
     _mu = 0.75 / np.pi ** 3  # equation (1.1.1)
-    C000 = 0.75 / np.pi * np.log(3 + 2 * np.sqrt(2))
     _a = np.pi / 4.0  # equation(2.3.1)
     _b = np.pi / 4.0  # equation(2.3.2)
 
@@ -32,20 +30,79 @@ class FourierAnalysis:
         d_beta = FourierAnalysis.d_beta(n_beta)
         return a + d_beta * (index + 0.5)
 
+    @staticmethod
+    def _get_z(n_sigma):
+        return np.arange(-n_sigma, n_sigma + 1)
+
+    @staticmethod
+    def _get_z_0(n_sigma):
+        z_0 = []
+        for sigma in np.arange(-n_sigma, n_sigma + 1):
+            if sigma == 0:
+                continue
+
+            z_0.append(sigma)
+
+        z_0 = np.array(z_0)
+        return z_0
+
+    @staticmethod
+    def _get_z_plus(n_sigma):
+        z_plus = []
+        for sigma in np.arange(1, n_sigma + 1):
+            z_plus.append(sigma)
+
+        z_plus = np.array(z_plus)
+        return z_plus
+
+    @staticmethod
+    def generate_trigs(n_beta):
+        sin = open("data/trigs/n_beta_%d/sin.txt" % n_beta, "w+")
+        sin.truncate(0)
+
+        cos = open("data/trigs/n_beta_%d/cos.txt" % n_beta, "w+")
+        cos.truncate(0)
+
+        tan = open("data/trigs/n_beta_%d/tan.txt" % n_beta, "w+")
+        tan.truncate(0)
+
+        for i in np.arange(n_beta):
+            beta = FourierAnalysis.beta(n_beta, i)
+            sin.write(str(np.sin(beta)) + " ")
+            cos.write(str(np.cos(beta)) + " ")
+            tan.write(str(np.tan(beta)) + " ")
+
     def __init__(self, n_beta, n_sigma):
         self._n_beta = n_beta  # equation(2.3.3)
-        self._d_beta = FourierAnalysis.get_d_beta(n_beta)  # equation (2.3.4)
+        self._d_beta = FourierAnalysis.d_beta(n_beta)  # equation (2.3.4)
 
         self._n_sigma = n_sigma
         self._z = self._get_z(n_sigma)
         self._z_0 = self._get_z_0(n_sigma)
         self._z_plus = self._get_z_plus(n_sigma)
 
-        self._calculate_values_of_trigonometric_functions()
-
         z = self.get_z()
         self._F = np.full((z.size, z.size, z.size), 0.0)
         self._G = np.full((z.size, z.size, z.size), 0.0)
+
+        # trigs
+        self._load_trigs()
+
+    def _load_trigs(self):
+        n_beta = self.get_n_beta()
+
+        sin = open("data/trigs/n_beta_%d/sin.txt" % n_beta).read().split(" ")
+        cos = open("data/trigs/n_beta_%d/cos.txt" % n_beta).read().split(" ")
+        tan = open("data/trigs/n_beta_%d/tan.txt" % n_beta).read().split(" ")
+
+        self._sin_beta = np.full(n_beta, 0.0)
+        self._cos_beta = np.full(n_beta, 0.0)
+        self._tan_beta = np.full(n_beta, 0.0)
+
+        for i in np.arange(n_beta):
+            self._sin_beta[i] = sin[i]
+            self._cos_beta[i] = cos[i]
+            self._tan_beta[i] = tan[i]
 
     def numerically_integrate(self, k, n, m):
         n_beta = self.get_n_beta()  # equation (2.3.3)
@@ -131,139 +188,3 @@ class FourierAnalysis:
     def get_G(self, k, n, m):  # equation (3.1.3)
         n_sigma = self.get_n_sigma()  # equation (3.3.3)
         return self._G[k + n_sigma][n + n_sigma][m + n_sigma]
-
-    def _calculate_values_of_trigonometric_functions(self):
-        # this method precalculates all the required values of the trigonometric functions
-        n_beta = self.get_n_beta()  # from equation (1)
-
-        self._sin_beta = np.full(n_beta, 0.0)
-        for i in np.arange(n_beta):
-            self._sin_beta[i] = np.sin(self.get_beta(i))
-
-        self._cos_beta = np.full(n_beta, 0.0)
-        for i in np.arange(n_beta):
-            self._cos_beta[i] = np.cos(self.get_beta(i))
-
-        self._tan_beta = np.full(n_beta, 0.0)
-        for i in np.arange(n_beta):
-            self._tan_beta[i] = np.tan(self.get_beta(i))
-
-    def generate(self):  # equation (1)
-        # this method precalculates all the required values of the C coefficient
-        n_sigma = self.get_n_sigma()  # equation (3.3.4)
-        z_0 = self.get_z_0()  # equation (3.3.2)
-        z_plus = self.get_z_plus()  # equation (3.3.1)
-        self._F = np.full((2 * n_sigma + 1, 2 * n_sigma + 1, 2 * n_sigma + 1), 0.0)  # equation (3.1.3)
-        self._G = np.full((2 * n_sigma + 1, 2 * n_sigma + 1, 2 * n_sigma + 1), 0.0)  # equation (3.1.3)
-        for k in z_0:
-            for n in z_0:
-                for m in z_plus:
-                    self._set_C(k, n, m, self.numerically_integrate(k, n, m))
-
-        for k in z_0:
-            for n in z_plus:
-                self._set_C(k, n, 0, self.numerically_integrate(k, n, 0))
-
-        for k in z_0:
-            self._set_C(k, 0, 0, self.numerically_integrate(k, 0, 0))
-
-        self._set_C(0, 0, 0, (self.C000, 0.0))
-
-        return self
-
-    def _set_C(self, k, n, m, values):  # equation (1)
-        n_sigma = self.get_n_sigma()
-        self._F[k + n_sigma][n + n_sigma][m + n_sigma] = values[0]
-        self._G[k + n_sigma][n + n_sigma][m + n_sigma] = values[1]
-        self._F[-k + n_sigma][-n + n_sigma][-m + n_sigma] = values[0]
-        self._G[-k + n_sigma][-n + n_sigma][-m + n_sigma] = -values[1]
-
-    def _set_F(self, k, n, m, value):
-        n_sigma = self.get_n_sigma()
-        self._F[k + n_sigma][n + n_sigma][m + n_sigma] = value
-
-    def _set_G(self, k, n, m, value):
-        n_sigma = self.get_n_sigma()
-        self._G[k + n_sigma][n + n_sigma][m + n_sigma] = value
-
-    @staticmethod
-    def _float_to_binary(num):
-        return bin(struct.unpack('!I', struct.pack('!f', num))[0])[2:].zfill(32)
-
-    @staticmethod
-    def _binary_to_float(binary):
-        return struct.unpack('!f', struct.pack('!I', int(binary, 2)))[0]
-
-    def unload(self, path):
-        n_beta = self.get_n_beta()
-        n_sigma = self.get_n_sigma()
-        file = open(path, "w+")
-        file.truncate(0)
-        file.write(str(n_beta))
-        file.write(" ")
-        file.write(str(n_sigma))
-        file.write(" ")
-        for _f in self._F:
-            for _ff in _f:
-                for _fff in _ff:
-                    file.write(self._float_to_binary(_fff))
-                    file.write(" ")
-
-        for _g in self._G:
-            for _gg in _g:
-                for _ggg in _gg:
-                    file.write(self._float_to_binary(_ggg))
-                    file.write(" ")
-
-    def _load(self, data):
-        n_beta = self.get_n_beta()
-        n_sigma = self.get_n_sigma()
-        z = self.get_z()
-        i = 2
-        for k in z:
-            for n in z:
-                for m in z:
-                    print(type(self._binary_to_float(data[i])))
-                    self._set_F(k, n, m, self._binary_to_float(data[i]))
-                    i += 1
-
-        for k in z:
-            for n in z:
-                for m in z:
-                    self._set_G(k, n, m, self._binary_to_float(data[i]))
-                    i += 1
-
-        return self
-
-    @staticmethod
-    def load(path):
-        file = open(path)
-        data = file.read().split(" ")
-        n_beta = int(data[0])
-        n_sigma = int(data[1])
-        return FourierAnalysis(n_beta, n_sigma)._load(data)
-
-    @staticmethod
-    def _get_z(n_sigma):
-        return np.arange(-n_sigma, n_sigma + 1)
-
-    @staticmethod
-    def _get_z_0(n_sigma):
-        z_0 = []
-        for sigma in np.arange(-n_sigma, n_sigma + 1):
-            if sigma == 0:
-                continue
-
-            z_0.append(sigma)
-
-        z_0 = np.array(z_0)
-        return z_0
-
-    @staticmethod
-    def _get_z_plus(n_sigma):
-        z_plus = []
-        for sigma in np.arange(1, n_sigma + 1):
-            z_plus.append(sigma)
-
-        z_plus = np.array(z_plus)
-        return z_plus
