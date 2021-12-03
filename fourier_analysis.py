@@ -3,14 +3,38 @@ import struct
 
 
 class FourierAnalysis:
-    mu = 0.75 / np.pi ** 3  # equation (1.1.1)
+    _mu = 0.75 / np.pi ** 3  # equation (1.1.1)
     C000 = 0.75 / np.pi * np.log(3 + 2 * np.sqrt(2))
+    _a = np.pi / 4.0  # equation(2.3.1)
+    _b = np.pi / 4.0  # equation(2.3.2)
 
-    def __init__(self, n_beta, n_sigma, a=-np.pi / 4, b=np.pi / 4):
-        self._a = a  # equation(2.3.1)
-        self._b = b  # equation(2.3.2)
+    @staticmethod
+    def get_mu():
+        return FourierAnalysis._mu
+
+    @staticmethod
+    def get_a():
+        return FourierAnalysis._a
+
+    @staticmethod
+    def get_b():
+        return FourierAnalysis._b
+
+    @staticmethod
+    def d_beta(n_beta):  # equation (2.3.4)
+        a = FourierAnalysis.get_a()
+        b = FourierAnalysis.get_b()
+        return (b - a) / n_beta
+
+    @staticmethod
+    def beta(n_beta, index):
+        a = FourierAnalysis.get_a()
+        d_beta = FourierAnalysis.d_beta(n_beta)
+        return a + d_beta * (index + 0.5)
+
+    def __init__(self, n_beta, n_sigma):
         self._n_beta = n_beta  # equation(2.3.3)
-        self._d_beta = (self.get_b() - self.get_a()) / self.get_n_beta()  # equation (2.3.4)
+        self._d_beta = FourierAnalysis.get_d_beta(n_beta)  # equation (2.3.4)
 
         self._n_sigma = n_sigma
         self._z = self._get_z(n_sigma)
@@ -25,7 +49,7 @@ class FourierAnalysis:
 
     def numerically_integrate(self, k, n, m):
         n_beta = self.get_n_beta()  # equation (2.3.3)
-        mu = self.mu  # equation (1.1.1)
+        mu = FourierAnalysis.get_mu()  # equation (1.1.1)
         d_beta2 = self.get_d_beta() ** 2  # equation (2.3.4)
         kappa = self.kappa(k)  # equation (1.1.4)
         sum_f = 0.0  # equation (2.5.1)
@@ -50,7 +74,7 @@ class FourierAnalysis:
     def g(kappa, t1, t2, p, q):  # equation (1.12.2)
         return np.pi * kappa * t2 / p + kappa * t1 / q
 
-    def beta(self, index):
+    def get_beta(self, index):
         return self.get_a() + self.get_d_beta() * (index + 0.5)
 
     @staticmethod
@@ -81,12 +105,6 @@ class FourierAnalysis:
 
     def tan(self, index):
         return self._tan_beta[index]
-
-    def get_a(self):  # equation (1)
-        return self._a
-
-    def get_b(self):  # equation (1)
-        return self._b
 
     def get_n_beta(self):  # equation (1)
         return self._n_beta
@@ -120,15 +138,15 @@ class FourierAnalysis:
 
         self._sin_beta = np.full(n_beta, 0.0)
         for i in np.arange(n_beta):
-            self._sin_beta[i] = np.sin(self.beta(i))
+            self._sin_beta[i] = np.sin(self.get_beta(i))
 
         self._cos_beta = np.full(n_beta, 0.0)
         for i in np.arange(n_beta):
-            self._cos_beta[i] = np.cos(self.beta(i))
+            self._cos_beta[i] = np.cos(self.get_beta(i))
 
         self._tan_beta = np.full(n_beta, 0.0)
         for i in np.arange(n_beta):
-            self._tan_beta[i] = np.tan(self.beta(i))
+            self._tan_beta[i] = np.tan(self.get_beta(i))
 
     def generate(self):  # equation (1)
         # this method precalculates all the required values of the C coefficient
