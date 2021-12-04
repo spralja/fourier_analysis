@@ -74,7 +74,7 @@ class FourierAnalysis:
 
     @staticmethod
     def generate_alpha(n_beta, n_sigma):
-        fourier_analysis = FourierAnalysis(n_beta, n_sigma, _load_alpha=False)
+        fourier_analysis = FourierAnalysis(n_beta, n_sigma, _load_alpha=False, _load_c=False)
 
         z_0 = fourier_analysis.get_z_0()
         z_plus = fourier_analysis.get_z_plus()
@@ -95,7 +95,32 @@ class FourierAnalysis:
 
         fourier_analysis._alpha.unload()
 
-    def __init__(self, n_beta, n_sigma, _load_trigs=True, _load_alpha=True):
+    @staticmethod
+    def generate_c(n_beta, n_sigma):
+        fourier_analysis = FourierAnalysis(n_beta, n_sigma, _load_c=False)
+        fourier_analysis._c = C(n_beta, n_sigma)
+        z_0 = fourier_analysis.get_z_0()
+        z_plus = fourier_analysis.get_z_plus()
+        for k in z_0:
+            for n in z_0:
+                for m in z_plus:
+                    c = fourier_analysis.numerically_integrate(k, n, m)
+                    fourier_analysis._c.set(k, n, m, c)
+
+        for k in z_0:
+            for n in z_plus:
+                c = fourier_analysis.numerically_integrate(k, n, 0)
+                fourier_analysis._c.set(k, n, 0, c)
+
+        for k in z_plus:
+            c = fourier_analysis.numerically_integrate(k, 0, 0)
+            fourier_analysis._c.set(k, 0, 0, c)
+
+        c = C.get_zero_zero_zero()
+        fourier_analysis._c.set(0, 0, 0, c)
+        fourier_analysis._c.unload()
+
+    def __init__(self, n_beta, n_sigma, _load_trigs=True, _load_alpha=True, _load_c=True):
         self._n_beta = n_beta  # equation(2.3.3)
         self._d_beta = FourierAnalysis.d_beta(n_beta)  # equation (2.3.4)
 
@@ -104,12 +129,16 @@ class FourierAnalysis:
         self._z_0 = FourierAnalysis.z_0(n_sigma)
         self._z_plus = FourierAnalysis.z_plus(n_sigma)
 
-        # trigs
         if _load_trigs:
             self._load_trigs()
 
         if _load_alpha:
             self._load_alpha()
+
+        if _load_c:
+            self._load_c()
+            self._c.print()
+
 
     def _load_trigs(self):
         n_beta = self.get_n_beta()
@@ -151,8 +180,52 @@ class FourierAnalysis:
                         if n == n_sigma + 1:
                             break
 
+    def _load_c(self):
+        n_beta = self.get_n_beta()
+        n_sigma = self.get_n_sigma()
+        f = open("data/n_beta_%d/n_sigma_%d/f.txt" % (n_beta, n_sigma)).read().split(" ")
+        g = open("data/n_beta_%d/n_sigma_%d/g.txt" % (n_beta, n_sigma)).read().split(" ")
+        z = self.get_z()
+        self._c = C(n_beta, n_sigma)
+
+        k = -n_sigma
+        n = -n_sigma
+        m = -n_sigma
+
+        for _f in f:
+            self._c.set_f(k, n, m, float(_f))
+            m += 1
+            if m == n_sigma + 1:
+                m = -n_sigma
+                n += 1
+                if n == n_sigma + 1:
+                    n = -n_sigma
+                    k += 1
+                    if k == n_sigma + 1:
+                        break
+
+        k = -n_sigma
+        n = -n_sigma
+        m = -n_sigma
+
+        for _g in g:
+            self._c.set_g(k, n, m, float(_g))
+            m += 1
+            if m == n_sigma + 1:
+                m = -n_sigma
+                n += 1
+                if n == n_sigma + 1:
+                    n = -n_sigma
+                    k += 1
+                    if k == n_sigma + 1:
+                        break
+
+        self._c.unload(
+            path_f="data/n_beta_%d/n_sigma_%d/f2.txt" % (n_beta, n_sigma),
+            path_g="data/n_beta_%d/n_sigma_%d/g2.txt" % (n_beta, n_sigma)
+        )
+
     def numerically_integrate(self, k, n, m):
-        print(self.get_d_beta())
         n_beta = self.get_n_beta()  # equation (2.3.3)
         mu = FourierAnalysis.get_mu()  # equation (1.1.1)
         d_beta2 = self.get_d_beta() ** 2  # equation (2.3.4)
@@ -275,3 +348,94 @@ class Alpha:
                 for __datum in _datum:
                     for ___datum in __datum:
                         alpha.write(str(___datum) + " ")
+
+
+class C:
+    _zero_zero_zero = (1, 0.0)
+
+    @staticmethod
+    def get_zero_zero_zero():
+        return C._zero_zero_zero
+
+    def __init__(self, n_beta, n_sigma):
+        self._n_beta = n_beta
+        self._n_sigma = n_sigma
+        z = FourierAnalysis.z(n_sigma)
+        self._f_data = np.full((z.size, z.size, z.size), 0.0)
+        self._g_data = np.full((z.size, z.size, z.size), 0.0)
+
+    def get_n_beta(self):
+        return self._n_beta
+
+    def get_n_sigma(self):
+        return self._n_sigma
+
+    def _get_sigma_to_index_sigma(self, sigma):
+        n_sigma = self.get_n_sigma()
+        return sigma + n_sigma
+
+    def set_f(self, k, n, m, value):
+        i_k = self._get_sigma_to_index_sigma(k)
+        i_n = self._get_sigma_to_index_sigma(n)
+        i_m = self._get_sigma_to_index_sigma(m)
+        self._f_data[i_k][i_n][i_m] = value
+
+        i_minus_k = self._get_sigma_to_index_sigma(-k)
+        i_minus_n = self._get_sigma_to_index_sigma(-n)
+        i_minus_m = self._get_sigma_to_index_sigma(-m)
+        self._f_data[i_minus_k][i_minus_n][i_minus_m] = value
+
+    def set_g(self, k, n, m, value):
+        i_k = self._get_sigma_to_index_sigma(k)
+        i_n = self._get_sigma_to_index_sigma(n)
+        i_m = self._get_sigma_to_index_sigma(m)
+        self._g_data[i_k][i_n][i_m] = value
+
+        i_minus_k = self._get_sigma_to_index_sigma(-k)
+        i_minus_n = self._get_sigma_to_index_sigma(-n)
+        i_minus_m = self._get_sigma_to_index_sigma(-m)
+        self._g_data[i_minus_k][i_minus_n][i_minus_m] = -value
+
+    def set(self, k, n, m, value):
+        self.set_f(k, n, m, value[0])
+        self.set_g(k, n, m, value[1])
+
+    def get(self, k, m, n):
+        i_k = self._get_sigma_to_index_sigma(k)
+        i_n = self._get_sigma_to_index_sigma(n)
+        i_m = self._get_sigma_to_index_sigma(m)
+        return self._f_data[i_k][i_n][i_m], self._g_data[i_k][i_n][i_m]
+
+    def unload(self, path_f=None, path_g=None):
+        n_beta = self.get_n_beta()
+        n_sigma = self.get_n_sigma()
+        if path_f is None:
+            path_f = "data/n_beta_%d/n_sigma_%d/f.txt" % (n_beta, n_sigma)
+
+        if path_g is None:
+            path_g = "data/n_beta_%d/n_sigma_%d/g.txt" % (n_beta, n_sigma)
+
+        f = open(path_f, "w+")
+        f.truncate(0)
+
+        g = open(path_g, "w+")
+        g.truncate(0)
+
+        for _f_data in self._f_data:
+            for __f_data in _f_data:
+                for ___f_data in __f_data:
+                    f.write(str(___f_data) + " ")
+
+        for _g_data in self._g_data:
+            for __g_data in _g_data:
+                for ___g_data in __g_data:
+                    g.write(str(___g_data) + " ")
+
+
+    def print(self):
+        n_sigma = self.get_n_sigma()
+        z = np.arange(-n_sigma, n_sigma + 1)
+        for k in z:
+            for n in z:
+                for m in z:
+                    print(k, m, n, self.get(k, m, n))
