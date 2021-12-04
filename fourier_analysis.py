@@ -76,7 +76,6 @@ class FourierAnalysis:
     def generate_alpha(n_beta, n_sigma):
         fourier_analysis = FourierAnalysis(n_beta, n_sigma, _load_alpha=False)
 
-        z = fourier_analysis.get_z()
         z_0 = fourier_analysis.get_z_0()
         z_plus = fourier_analysis.get_z_plus()
 
@@ -131,7 +130,6 @@ class FourierAnalysis:
     def _load_alpha(self):
         n_beta = self.get_n_beta()
         n_sigma = self.get_n_sigma()
-        z = self.get_z()
         alpha = open("data/n_beta_%d/n_sigma_%d/alpha.txt" % (n_beta, n_sigma)).read().split(" ")
         self._alpha = Alpha(n_beta, n_sigma)
         n = -n_sigma
