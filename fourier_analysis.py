@@ -57,13 +57,13 @@ class FourierAnalysis:
 
     @staticmethod
     def generate_trigs(n_beta):
-        sin = open("data/trigs/n_beta_%d/sin.txt" % n_beta, "w+")
+        sin = open("data/n_beta_%d/trigs/sin.txt" % n_beta, "w+")
         sin.truncate(0)
 
-        cos = open("data/trigs/n_beta_%d/cos.txt" % n_beta, "w+")
+        cos = open("data/n_beta_%d/trigs/cos.txt" % n_beta, "w+")
         cos.truncate(0)
 
-        tan = open("data/trigs/n_beta_%d/tan.txt" % n_beta, "w+")
+        tan = open("data/n_beta_%d/trigs/tan.txt" % n_beta, "w+")
         tan.truncate(0)
 
         for i in np.arange(n_beta):
@@ -115,9 +115,9 @@ class FourierAnalysis:
     def _load_trigs(self):
         n_beta = self.get_n_beta()
 
-        sin = open("data/trigs/n_beta_%d/sin.txt" % n_beta).read().split(" ")
-        cos = open("data/trigs/n_beta_%d/cos.txt" % n_beta).read().split(" ")
-        tan = open("data/trigs/n_beta_%d/tan.txt" % n_beta).read().split(" ")
+        sin = open("data/n_beta_%d/trigs/sin.txt" % n_beta).read().split(" ")
+        cos = open("data/n_beta_%d/trigs/cos.txt" % n_beta).read().split(" ")
+        tan = open("data/n_beta_%d/trigs/tan.txt" % n_beta).read().split(" ")
 
         self._sin_beta = np.full(n_beta, 0.0)
         self._cos_beta = np.full(n_beta, 0.0)
@@ -134,11 +134,24 @@ class FourierAnalysis:
         z = self.get_z()
         alpha = open("data/n_beta_%d/n_sigma_%d/alpha.txt" % (n_beta, n_sigma)).read().split(" ")
         self._alpha = Alpha(n_beta, n_sigma)
-        for n in z:
-            for m in z:
-                for phi in np.arange(n_beta):
-                    for theta in np.arange(n_beta):
-                        pass
+        n = -n_sigma
+        m = -n_sigma
+        phi = 0
+        theta = 0
+        for _alpha in alpha:
+            self._alpha.set(n, m, phi, theta, float(_alpha))
+            theta += 1
+            if theta == n_beta:
+                theta = 0
+                phi += 1
+                if phi == n_beta:
+                    phi = 0
+                    m += 1
+                    if m == n_sigma + 1:
+                        m = -n_sigma
+                        n += 1
+                        if n == n_sigma + 1:
+                            break
 
     def numerically_integrate(self, k, n, m):
         print(self.get_d_beta())
@@ -250,10 +263,13 @@ class Alpha:
         n_sigma = self.get_n_sigma()
         return sigma + n_sigma
 
-    def unload(self):
+    def unload(self, path=None):
         n_beta = self.get_n_beta()
         n_sigma = self.get_n_sigma()
-        alpha = open("data/trigs/n_beta_%d/n_sigma_%d/alpha.txt" % (n_beta, n_sigma), "w+")
+        if path is None:
+            path = "data/n_beta_%d/n_sigma_%d/alpha.txt" % (n_beta, n_sigma)
+
+        alpha = open(path, "w+")
         alpha.truncate(0)
 
         for datum in self._data:
