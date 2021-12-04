@@ -3,7 +3,7 @@ import numpy as np
 
 class FourierAnalysis:
     _mu = 0.75 / np.pi ** 3  # equation (1.1.1)
-    _a = np.pi / 4.0  # equation(2.3.1)
+    _a = -np.pi / 4.0  # equation(2.3.1)
     _b = np.pi / 4.0  # equation(2.3.2)
 
     @staticmethod
@@ -31,11 +31,11 @@ class FourierAnalysis:
         return a + d_beta * (index + 0.5)
 
     @staticmethod
-    def _get_z(n_sigma):
+    def z(n_sigma):
         return np.arange(-n_sigma, n_sigma + 1)
 
     @staticmethod
-    def _get_z_0(n_sigma):
+    def z_0(n_sigma):
         z_0 = []
         for sigma in np.arange(-n_sigma, n_sigma + 1):
             if sigma == 0:
@@ -47,7 +47,7 @@ class FourierAnalysis:
         return z_0
 
     @staticmethod
-    def _get_z_plus(n_sigma):
+    def z_plus(n_sigma):
         z_plus = []
         for sigma in np.arange(1, n_sigma + 1):
             z_plus.append(sigma)
@@ -72,21 +72,45 @@ class FourierAnalysis:
             cos.write(str(np.cos(beta)) + " ")
             tan.write(str(np.tan(beta)) + " ")
 
-    def __init__(self, n_beta, n_sigma):
+    @staticmethod
+    def generate_alpha(n_beta, n_sigma):
+        fourier_analysis = FourierAnalysis(n_beta, n_sigma, _load_alpha=False)
+
+        z = fourier_analysis.get_z()
+        z_0 = fourier_analysis.get_z_0()
+        z_plus = fourier_analysis.get_z_plus()
+
+        fourier_analysis._alpha = Alpha(n_beta, n_sigma)
+        for n in z_0:
+            for m in z_plus:
+                for phi in np.arange(n_beta):
+                    for theta in np.arange(n_beta):
+                        alpha = fourier_analysis.alpha(n, m, phi, theta)
+                        fourier_analysis._alpha.set(n, m, phi, theta, alpha)
+
+        for n in z_plus:
+            for phi in np.arange(n_beta):
+                for theta in np.arange(n_beta):
+                    alpha = fourier_analysis.alpha(n, 0, phi, theta)
+                    fourier_analysis._alpha.set(n, 0, phi, theta, alpha)
+
+        fourier_analysis._alpha.unload()
+
+    def __init__(self, n_beta, n_sigma, _load_trigs=True, _load_alpha=True):
         self._n_beta = n_beta  # equation(2.3.3)
         self._d_beta = FourierAnalysis.d_beta(n_beta)  # equation (2.3.4)
 
         self._n_sigma = n_sigma
-        self._z = self._get_z(n_sigma)
-        self._z_0 = self._get_z_0(n_sigma)
-        self._z_plus = self._get_z_plus(n_sigma)
-
-        z = self.get_z()
-        self._F = np.full((z.size, z.size, z.size), 0.0)
-        self._G = np.full((z.size, z.size, z.size), 0.0)
+        self._z = FourierAnalysis.z(n_sigma)
+        self._z_0 = FourierAnalysis.z_0(n_sigma)
+        self._z_plus = FourierAnalysis.z_plus(n_sigma)
 
         # trigs
-        self._load_trigs()
+        if _load_trigs:
+            self._load_trigs()
+
+        if _load_alpha:
+            self._load_alpha()
 
     def _load_trigs(self):
         n_beta = self.get_n_beta()
@@ -104,7 +128,20 @@ class FourierAnalysis:
             self._cos_beta[i] = cos[i]
             self._tan_beta[i] = tan[i]
 
+    def _load_alpha(self):
+        n_beta = self.get_n_beta()
+        n_sigma = self.get_n_sigma()
+        z = self.get_z()
+        alpha = open("data/n_beta_%d/n_sigma_%d/alpha.txt" % (n_beta, n_sigma)).read().split(" ")
+        self._alpha = Alpha(n_beta, n_sigma)
+        for n in z:
+            for m in z:
+                for phi in np.arange(n_beta):
+                    for theta in np.arange(n_beta):
+                        pass
+
     def numerically_integrate(self, k, n, m):
+        print(self.get_d_beta())
         n_beta = self.get_n_beta()  # equation (2.3.3)
         mu = FourierAnalysis.get_mu()  # equation (1.1.1)
         d_beta2 = self.get_d_beta() ** 2  # equation (2.3.4)
@@ -181,10 +218,46 @@ class FourierAnalysis:
     def get_z_plus(self):
         return self._z_plus
 
-    def get_F(self, k, n, m):  # equation (3.1.3)
-        n_sigma = self.get_n_sigma()  # equation (3.3.3)
-        return self._F[k + n_sigma][n + n_sigma][m + n_sigma]
 
-    def get_G(self, k, n, m):  # equation (3.1.3)
-        n_sigma = self.get_n_sigma()  # equation (3.3.3)
-        return self._G[k + n_sigma][n + n_sigma][m + n_sigma]
+class Alpha:
+    def __init__(self, n_beta, n_sigma):
+        self._n_beta = n_beta
+        self._n_sigma = n_sigma
+        z = FourierAnalysis.z(n_sigma)
+        self._data = np.full((z.size, z.size, n_beta, n_beta), 0.0)
+
+    def get(self, n, m, phi, theta):
+        i_n = self._get_sigma_to_index_sigma(n)
+        i_m = self._get_sigma_to_index_sigma(m)
+        return self._data[i_n][i_m][phi][theta]
+
+    def set(self, n, m, phi, theta, value):
+        i_n = self._get_sigma_to_index_sigma(n)
+        i_m = self._get_sigma_to_index_sigma(m)
+        self._data[i_n][i_m][phi][theta] = value
+
+        i_minus_n = self._get_sigma_to_index_sigma(-n)
+        i_minus_m = self._get_sigma_to_index_sigma(-m)
+        self._data[i_minus_n][i_minus_m][phi][theta] = value
+
+    def get_n_beta(self):
+        return self._n_beta
+
+    def get_n_sigma(self):
+        return self._n_sigma
+
+    def _get_sigma_to_index_sigma(self, sigma):
+        n_sigma = self.get_n_sigma()
+        return sigma + n_sigma
+
+    def unload(self):
+        n_beta = self.get_n_beta()
+        n_sigma = self.get_n_sigma()
+        alpha = open("data/trigs/n_beta_%d/n_sigma_%d/alpha.txt" % (n_beta, n_sigma), "w+")
+        alpha.truncate(0)
+
+        for datum in self._data:
+            for _datum in datum:
+                for __datum in _datum:
+                    for ___datum in __datum:
+                        alpha.write(str(___datum) + " ")
